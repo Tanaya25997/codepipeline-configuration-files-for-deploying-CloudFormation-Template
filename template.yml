@@ -1,0 +1,94 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: 'AWS::Serverless-2016-10-31'
+
+Parameters:
+  ProjectId:
+    Type: String
+    Description: ElderCounsel ED3 API
+  CodeDeployRole:
+    Type: String
+    Description: IAM role to allow AWS CodeDeploy to manage deployment of AWS Lambda functions
+  Stage:
+    Type: String
+    Description: The name for a project pipeline stage, such as Staging or Prod, for which resources are provisioned and deployed.
+    Default: ''
+
+Globals:
+  Function:
+    AutoPublishAlias: live
+    DeploymentPreference:
+      Enabled: true
+      #--# Type: Canary10Percent5Minutes
+      Type: AllAtOnce
+      Role: !Ref CodeDeployRole
+
+Resources:
+  ###########################################
+  #####
+  ##### LAMBDA FUNCTIONS
+  # GetDataByType:
+  #   Type: AWS::Serverless::Function
+  #   Properties:
+  #     FunctionName: !Sub '${ProjectId}-GetDataByType'
+  #     Handler: index-GetDataByType.handler
+  #     Runtime: python3.8
+  #     Role:
+  #       Fn::GetAtt:
+  #       - LambdaExecutionRole
+  #       - Arn
+  #     Events:
+  #       GetEvent:
+  #         Type: Api
+  #         Properties:
+  #           Path: /GetDataByType
+  #           Method: get
+  #       #PostEvent:
+  #       #  Type: Api
+  #       #  Properties:
+  #       #    Path: /GetData
+  #       #    Method: post
+  # #
+  GetMatters:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${ProjectId}-GetMatters'
+      Handler: index-GetMatters.handler
+      Runtime: python3.8
+      InlineCode: |
+          exports.handler = async (event) => {
+              console.log(JSON.stringify(event, null, 2));
+              const response = {
+                  statusCode: 200,
+                  body: JSON.stringify('Hello from Lambda!'),
+              };
+              return response;
+          };
+      Runtime: nodejs12.x
+      Timeout: 5
+      Role:
+        Fn::GetAtt:
+        - LambdaExecutionRole
+        - Arn
+
+  ###########################################
+  #####
+  ##### IAM ROLES
+  LambdaExecutionRole:
+    Description: Creating service role in IAM for AWS Lambda
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${ProjectId}-Execution${Stage}'
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [lambda.amazonaws.com]
+          Action: sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+        #--# read only lambda permissions
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/AWSLambdaReadOnlyAccess'
+        #--# dynamo read access
+      #  - !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/ED3_Data_READ_PermissionsBoundary'
+      #--# PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/CodeStar_${ProjectId}_PermissionsBoundary'
