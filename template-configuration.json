@@ -1,0 +1,6 @@
+{
+  "Parameters" : {
+    "ProjectId":"ed3-api-v1-configfile", 
+    "CodeDeployRole":"arn:aws:iam::774640474711:role/CodeDeployServiceRole"
+  }
+}
